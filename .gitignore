@@ -7,3 +7,4 @@ __pycache__
 pip-selfcheck.json
 .idea
 /Python-BookAPI.iml
+/.pytest_cache/

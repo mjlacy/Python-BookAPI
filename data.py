@@ -1,5 +1,4 @@
 from pymongo import MongoClient
-from bson.objectid import ObjectId
 
 
 def _getClient():
@@ -34,15 +33,11 @@ def get_book(obj_id):
 
 
 def post_book(body):
-    if "_id" in body:
-        body['_id'] = ObjectId(body['_id'])
-
     result = client[database][collection].insert_one(body)
     return result
 
 
 def put_book(obj_id, body):
-    body.pop('_id', None)
     result = client[database][collection].update_one({"_id": obj_id}, {'$set': body}, upsert=True)
     return result
 
