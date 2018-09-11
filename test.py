@@ -1,5 +1,6 @@
 from flask import json, url_for
 from app import app
+import copy
 import data
 import pytest
 from bson import ObjectId
@@ -11,6 +12,23 @@ headers = {
     'Content-Type': mimetype,
     'Accept': mimetype
 }
+
+mock_collection = [
+    {
+        "_id": "5a80868574fdd6de0f4fa430",
+        "author": "Leo Tolstoy",
+        "bookId": 1,
+        "name": "War and Peace",
+        "year": 1869
+    },
+    {
+        "_id": "5a80868574fdd6de0f4fa431",
+        "author": "William Golding",
+        "bookId": 2,
+        "name": "Lord of the Flies",
+        "year": 1954
+    }
+]
 
 @pytest.fixture
 def client():
@@ -44,23 +62,6 @@ def test_get__all_books_exception(client, monkeypatch):
 
 
 def test_get_all_books_success(client, monkeypatch):
-    mock_collection = [
-        {
-            "_id": "5a80868574fdd6de0f4fa430",
-            "author": "Leo Tolstoy",
-            "bookId": 1,
-            "name": "War and Peace",
-            "year": 1869
-        },
-        {
-            "_id": "5a80868574fdd6de0f4fa431",
-            "author": "William Golding",
-            "bookId": 2,
-            "name": "Lord of the Flies",
-            "year": 1954
-        }
-    ]
-
     def mock_return():
         return mock_collection
 
@@ -85,7 +86,7 @@ def test_get_one_book_invalidId(client):
 
 
 def test_get_one_book_exception(client, monkeypatch):
-    def mock_return():
+    def mock_return(obj_id):
         raise Exception('Test Exception')
 
     monkeypatch.setattr(data, 'get_book', mock_return)
@@ -95,21 +96,13 @@ def test_get_one_book_exception(client, monkeypatch):
 
 
 def test_get_book_success(client, monkeypatch):
-    mock_book = {
-            "_id": "5a80868574fdd6de0f4fa430",
-            "author": "Leo Tolstoy",
-            "bookId": 1,
-            "name": "War and Peace",
-            "year": 1869
-        }
-
-    def mock_return(object_id):
-        return mock_book
+    def mock_return(obj_id):
+        return mock_collection[0]
 
     monkeypatch.setattr(data, 'get_book', mock_return)
     res = client.get('/5a80868574fdd6de0f4fa430')
 
-    assert res.data.decode('utf-8') == json.dumps(mock_book)
+    assert res.data.decode('utf-8') == json.dumps(mock_collection[0])
     assert res.status_code == 200
 
 
@@ -119,13 +112,8 @@ def test_create_book_mapping():
 
 
 def test_create_book_invalidId(client):
-    req_body = {
-        "_id": "5a80868574fdd",
-        "author": "Leo Tolstoy",
-        "bookId": 1,
-        "name": "War and Peace",
-        "year": 1869
-    }
+    req_body = copy.copy(mock_collection[0])
+    req_body['_id'] = "5a80868574fdd"
 
     res = client.post('/', data=json.dumps(req_body), headers=headers)
     assert res.data == b'{"message":"The _id you specified is not a valid ObjectId, ' \
@@ -134,49 +122,29 @@ def test_create_book_invalidId(client):
 
 
 def test_create_book_duplicateKeyError(client, monkeypatch):
-    req_body = {
-        "_id": "5a80868574fdd6de0f4fa430",
-        "author": "Leo Tolstoy",
-        "bookId": 1,
-        "name": "War and Peace",
-        "year": 1869
-    }
-
     def mock_return(body):
         raise DuplicateKeyError('Key already exists')
 
     monkeypatch.setattr(data, 'post_book', mock_return)
-    res = client.post('/', data=json.dumps(req_body), headers=headers)
+    res = client.post('/', data=json.dumps(mock_collection[0]), headers=headers)
 
     assert res.data == b'{"message":"The _id you specified already exists, please choose a different one"}\n'
     assert res.status_code == 409
 
 
 def test_create_book_exception(client, monkeypatch):
-    req_body = {
-        "_id": "5a80868574fdd6de0f4fa430",
-        "author": "Leo Tolstoy",
-        "bookId": 1,
-        "name": "War and Peace",
-        "year": 1869
-    }
-
     def mock_return(body):
         raise Exception('Test Exception')
 
     monkeypatch.setattr(data, 'post_book', mock_return)
-    res = client.post('/', data=json.dumps(req_body), headers=headers)
+    res = client.post('/', data=json.dumps(mock_collection[0]), headers=headers)
     assert res.data == b'{"message":"An error occurred while processing your request"}\n'
     assert res.status_code == 500
 
 
 def test_create_book_noId_success(client, monkeypatch):
-    req_body = {
-        "author": "Leo Tolstoy",
-        "bookId": 1,
-        "name": "War and Peace",
-        "year": 1869
-    }
+    req_body = copy.copy(mock_collection[0])
+    req_body.pop('_id')
 
     def mock_return(body):
         return InsertOneResult('5a80868574fdd6de0f4fa431', True)
@@ -188,19 +156,11 @@ def test_create_book_noId_success(client, monkeypatch):
 
 
 def test_create_book_id_success(client, monkeypatch):
-    req_body = {
-        "_id": "5a80868574fdd6de0f4fa431",
-        "author": "Leo Tolstoy",
-        "bookId": 1,
-        "name": "War and Peace",
-        "year": 1869
-    }
-
     def mock_return(body):
         return InsertOneResult('5a80868574fdd6de0f4fa432', True)
 
     monkeypatch.setattr(data, 'post_book', mock_return)
-    res = client.post('/', data=json.dumps(req_body), headers=headers)
+    res = client.post('/', data=json.dumps(mock_collection[0]), headers=headers)
     assert res.data == b'{"link":"/5a80868574fdd6de0f4fa432"}\n'
     assert res.status_code == 201
 
@@ -211,43 +171,25 @@ def test_update_book_mapping():
 
 
 def test_update_book_invalidId(client):
-    req_body = {
-        "author": "Leo Tolstoy",
-        "bookId": 1,
-        "name": "War and Peace",
-        "year": 1869
-    }
-
-    res = client.put('/5a80868574fdd', data=json.dumps(req_body), headers=headers)
+    res = client.put('/5a80868574fdd', data=json.dumps(mock_collection[0]), headers=headers)
     assert res.data == b'{"message":"The _id you specified is not a valid ObjectId, ' \
             b'it must be a 12-byte input or 24-character hex string"}\n'
     assert res.status_code == 400
 
 
 def test_update_book_exception(client, monkeypatch):
-    req_body = {
-        "author": "Leo Tolstoy",
-        "bookId": 1,
-        "name": "War and Peace",
-        "year": 1869
-    }
-
-    def mock_return(body):
+    def mock_return(obj_id, body):
         raise Exception('Test Exception')
 
     monkeypatch.setattr(data, 'put_book', mock_return)
-    res = client.put('/5a80868574fdd6de0f4fa430', data=json.dumps(req_body), headers=headers)
+    res = client.put('/5a80868574fdd6de0f4fa430', data=json.dumps(mock_collection[0]), headers=headers)
     assert res.data == b'{"message":"An error occurred while processing your request"}\n'
     assert res.status_code == 500
 
 
 def test_update_book_noId_insert_success(client, monkeypatch):
-    req_body = {
-        "author": "Leo Tolstoy",
-        "bookId": 1,
-        "name": "War and Peace",
-        "year": 1869
-    }
+    req_body = copy.copy(mock_collection[0])
+    req_body.pop('_id')
 
     def mock_return(obj_id, body):
         return UpdateResult({'n': 1, 'nModified': 0, 'upserted': ObjectId('5a80868574fdd6de0f4fa432'),
@@ -259,12 +201,8 @@ def test_update_book_noId_insert_success(client, monkeypatch):
     assert res.status_code == 201
 
 def test_update_book_noId_update_success(client, monkeypatch):
-    req_body = {
-        "author": "Leo Tolstoy",
-        "bookId": 1,
-        "name": "War and Peace",
-        "year": 1869
-    }
+    req_body = copy.copy(mock_collection[0])
+    req_body.pop('_id')
 
     def mock_return(obj_id, body):
         return UpdateResult({'n': 1, 'nModified': 1, 'ok': 1.0, 'updatedExisting': True}, True)
@@ -276,37 +214,21 @@ def test_update_book_noId_update_success(client, monkeypatch):
 
 
 def test_update_book_id_insert_success(client, monkeypatch):
-    req_body = {
-        "_id": "5a80868574fdd6de0f4fa432",
-        "author": "Leo Tolstoy",
-        "bookId": 1,
-        "name": "War and Peace",
-        "year": 1869
-    }
-
     def mock_return(obj_id, body):
         return UpdateResult({'n': 1, 'nModified': 0, 'upserted': ObjectId('5a80868574fdd6de0f4fa432'),
                              'ok': 1.0, 'updatedExisting': False}, True)
 
     monkeypatch.setattr(data, 'put_book', mock_return)
-    res = client.put('/5a80868574fdd6de0f4fa432', data=json.dumps(req_body), headers=headers)
+    res = client.put('/5a80868574fdd6de0f4fa432', data=json.dumps(mock_collection[0]), headers=headers)
     assert res.data == b'{"link":"/5a80868574fdd6de0f4fa432"}\n'
     assert res.status_code == 201
 
 def test_update_book_id_update_success(client, monkeypatch):
-    req_body = {
-        "_id": "5a80868574fdd6de0f4fa432",
-        "author": "Leo Tolstoy",
-        "bookId": 1,
-        "name": "War and Peace",
-        "year": 1869
-    }
-
     def mock_return(obj_id, body):
         return UpdateResult({'n': 1, 'nModified': 1, 'ok': 1.0, 'updatedExisting': True}, True)
 
     monkeypatch.setattr(data, 'put_book', mock_return)
-    res = client.put('/5a80868574fdd6de0f4fa432', data=json.dumps(req_body), headers=headers)
+    res = client.put('/5a80868574fdd6de0f4fa432', data=json.dumps(mock_collection[0]), headers=headers)
     assert res.data == b'{"link":"/5a80868574fdd6de0f4fa432"}\n'
     assert res.status_code == 200
 
@@ -334,7 +256,7 @@ def test_delete_book_invalidId(client):
 
 
 def test_delete_book_exception(client, monkeypatch):
-    def mock_return():
+    def mock_return(obj_id):
         raise Exception('Test Exception')
 
     monkeypatch.setattr(data, 'delete_book', mock_return)
@@ -344,9 +266,13 @@ def test_delete_book_exception(client, monkeypatch):
 
 
 def test_delete_book_success(client, monkeypatch):
+    def mock_get_return(obj_id):
+        return mock_collection[0]
+
     def mock_return(obj_id):
         return DeleteResult({'n': 1, 'ok': 1.0}, True)
 
+    monkeypatch.setattr(data, 'get_book', mock_get_return)
     monkeypatch.setattr(data, 'delete_book', mock_return)
     res = client.delete('/5a80868574fdd6de0f4fa430')
     assert res.data == b'{"message":"Object with id: 5a80868574fdd6de0f4fa430 deleted successfully"}\n'
