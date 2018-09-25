@@ -57,7 +57,7 @@ def test_get__all_books_exception(client, monkeypatch):
 
     monkeypatch.setattr(data, 'get_books', mock_return)
     res = client.get('/')
-    assert res.data == b'{"message":"An error occurred while processing your request"}\n'
+    assert res.data == b'{"error":"Test Exception"}\n'
     assert res.status_code == 500
 
 
@@ -80,7 +80,7 @@ def test_get_one_book_mapping():
 
 def test_get_one_book_invalidId(client):
     res = client.get('/5a80868574fdd')
-    assert res.data == b'{"message":"The _id you specified is not a valid ObjectId, ' \
+    assert res.data == b'{"error":"The _id you specified is not a valid ObjectId, ' \
             b'it must be a 12-byte input or 24-character hex string"}\n'
     assert res.status_code == 400
 
@@ -91,7 +91,7 @@ def test_get_one_book_exception(client, monkeypatch):
 
     monkeypatch.setattr(data, 'get_book', mock_return)
     res = client.get('/5a80868574fdd6de0f4fa430')
-    assert res.data == b'{"message":"An error occurred while processing your request"}\n'
+    assert res.data == b'{"error":"Test Exception"}\n'
     assert res.status_code == 500
 
 
@@ -116,7 +116,7 @@ def test_create_book_invalidId(client):
     req_body['_id'] = "5a80868574fdd"
 
     res = client.post('/', data=json.dumps(req_body), headers=headers)
-    assert res.data == b'{"message":"The _id you specified is not a valid ObjectId, ' \
+    assert res.data == b'{"error":"The _id you specified is not a valid ObjectId, ' \
              b'it must be a 12-byte input or 24-character hex string"}\n'
     assert res.status_code == 400
 
@@ -128,7 +128,7 @@ def test_create_book_duplicateKeyError(client, monkeypatch):
     monkeypatch.setattr(data, 'post_book', mock_return)
     res = client.post('/', data=json.dumps(mock_collection[0]), headers=headers)
 
-    assert res.data == b'{"message":"The _id you specified already exists, please choose a different one"}\n'
+    assert res.data == b'{"error":"The _id you specified already exists, please choose a different one"}\n'
     assert res.status_code == 409
 
 
@@ -138,7 +138,7 @@ def test_create_book_exception(client, monkeypatch):
 
     monkeypatch.setattr(data, 'post_book', mock_return)
     res = client.post('/', data=json.dumps(mock_collection[0]), headers=headers)
-    assert res.data == b'{"message":"An error occurred while processing your request"}\n'
+    assert res.data == b'{"error":"Test Exception"}\n'
     assert res.status_code == 500
 
 
@@ -172,7 +172,7 @@ def test_update_book_mapping():
 
 def test_update_book_invalidId(client):
     res = client.put('/5a80868574fdd', data=json.dumps(mock_collection[0]), headers=headers)
-    assert res.data == b'{"message":"The _id you specified is not a valid ObjectId, ' \
+    assert res.data == b'{"error":"The _id you specified is not a valid ObjectId, ' \
             b'it must be a 12-byte input or 24-character hex string"}\n'
     assert res.status_code == 400
 
@@ -183,7 +183,7 @@ def test_update_book_exception(client, monkeypatch):
 
     monkeypatch.setattr(data, 'put_book', mock_return)
     res = client.put('/5a80868574fdd6de0f4fa430', data=json.dumps(mock_collection[0]), headers=headers)
-    assert res.data == b'{"message":"An error occurred while processing your request"}\n'
+    assert res.data == b'{"error":"Test Exception"}\n'
     assert res.status_code == 500
 
 
@@ -240,17 +240,17 @@ def test_delete_book_mapping():
 
 def test_delete_book_idNotFound(client, monkeypatch):
     def mock_return(obj_id):
-        return []
+        return None
 
     monkeypatch.setattr(data, 'get_book', mock_return)
     res = client.delete('/5a80868574fdd6de0f4fa433')
-    assert res.data == b'{"message":"No object with an id of 5a80868574fdd6de0f4fa433 found to delete"}\n'
+    assert res.data == b'{"error":"No book with an _id of 5a80868574fdd6de0f4fa433 found to delete"}\n'
     assert res.status_code == 404
 
 
 def test_delete_book_invalidId(client):
     res = client.delete('/5a80868574fdd')
-    assert res.data == b'{"message":"The _id you specified is not a valid ObjectId, ' \
+    assert res.data == b'{"error":"The _id you specified is not a valid ObjectId, ' \
                         b'it must be a 12-byte input or 24-character hex string"}\n'
     assert res.status_code == 400
 
@@ -259,9 +259,10 @@ def test_delete_book_exception(client, monkeypatch):
     def mock_return(obj_id):
         raise Exception('Test Exception')
 
-    monkeypatch.setattr(data, 'delete_book', mock_return)
+    monkeypatch.setattr(data, 'get_book', mock_return)
     res = client.delete('/5a80868574fdd6de0f4fa430')
-    assert res.data == b'{"message":"An error occurred while processing your request"}\n'
+    print(res.data)
+    assert res.data == b'{"error":"Test Exception"}\n'
     assert res.status_code == 500
 
 

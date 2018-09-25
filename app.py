@@ -1,19 +1,11 @@
-from bson import ObjectId
-from bson.errors import InvalidId
 import data
 from flask import Flask, request, Response, json, jsonify
 from flask_cors import CORS
+from bson.errors import InvalidId
 from pymongo.errors import DuplicateKeyError
 
 app = Flask(__name__)
 CORS(app)
-
-
-class JSONEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, ObjectId):
-            return str(o)
-        return json.JSONEncoder.default(self, o)
 
 
 @app.route('/health')
@@ -24,60 +16,56 @@ def health():
 @app.route('/', methods=['GET'])
 def get_all_books():
     try:
-        books = {"books": list(map(lambda book: book, data.get_books()))}
-        return Response(JSONEncoder().encode(books), status=200, mimetype='application/json')
+        books = {"books": data.get_books()}
+        return Response(json.dumps(books), status=200, mimetype='application/json')
 
     except Exception as e:
         print(e)
-        return jsonify(message="An error occurred while processing your request"), 500
+        return jsonify(error=str(e)), 500
 
 
 @app.route('/<object_id>', methods=['GET'])
 def get_one_book(object_id):
     try:
-        obj_id = ObjectId(object_id)
-        book = data.get_book(obj_id)
-        return Response(JSONEncoder().encode(book), status=200, mimetype='application/json')
+        book = data.get_book(object_id)
+
+        if book is None:
+            return jsonify(error="No book with an _id of " + object_id + " found"), 404
+
+        return Response(json.dumps(book), status=200, mimetype='application/json')
 
     except InvalidId as ex:
         print(ex)
-        return jsonify(message="The _id you specified is not a valid ObjectId, "
+        return jsonify(error="The _id you specified is not a valid ObjectId, "
                                "it must be a 12-byte input or 24-character hex string"), 400
 
     except Exception as e:
         print(e)
-        return jsonify(message="An error occurred while processing your request"), 500
+        return jsonify(error=str(e)), 500
 
 
 @app.route('/', methods=['POST'])
 def create_book():
     try:
-        body = request.get_json()
-        if "_id" in body:
-            body['_id'] = ObjectId(body['_id'])
-
-        result = data.post_book(body)
+        result = data.post_book(request.get_json())
         return jsonify(link='/' + str(result.inserted_id)), 201
 
     except InvalidId:
-        return jsonify(message="The _id you specified is not a valid ObjectId, "
+        return jsonify(error="The _id you specified is not a valid ObjectId, "
                        "it must be a 12-byte input or 24-character hex string"), 400
 
     except DuplicateKeyError:
-        return jsonify(message="The _id you specified already exists, please choose a different one"), 409
+        return jsonify(error="The _id you specified already exists, please choose a different one"), 409
 
     except Exception as e:
         print(e)
-        return jsonify(message="An error occurred while processing your request"), 500
+        return jsonify(error=str(e)), 500
 
 
 @app.route('/<object_id>', methods=['PUT'])
 def update_book(object_id):
     try:
-        obj_id = ObjectId(object_id)
-        body = request.get_json()
-        body.pop('_id', None)
-        result = data.put_book(obj_id, body)
+        result = data.put_book(object_id, request.get_json())
 
         if result.upserted_id is not None:
             return jsonify(link='/' + str(result.upserted_id)), 201
@@ -85,32 +73,31 @@ def update_book(object_id):
         return jsonify(link='/' + object_id)
 
     except InvalidId:
-        return jsonify(message="The _id you specified is not a valid ObjectId, "
+        return jsonify(error="The _id you specified is not a valid ObjectId, "
                                "it must be a 12-byte input or 24-character hex string"), 400
 
     except Exception as e:
         print(e)
-        return jsonify(message="An error occurred while processing your request"), 500
+        return jsonify(error=str(e)), 500
 
 
 @app.route('/<object_id>', methods=['DELETE'])
 def delete_one_book(object_id):
     try:
-        obj_id = ObjectId(object_id)
-        if len(data.get_book(obj_id)) == 0:
-            return jsonify(message="No object with an id of " + object_id + " found to delete"), 404
+        if data.get_book(object_id) is None:
+            return jsonify(error="No book with an _id of " + object_id + " found to delete"), 404
 
-        data.delete_book(obj_id)
+        data.delete_book(object_id)
         return jsonify(message="Object with id: " + object_id + " deleted successfully"), 200
 
     except InvalidId:
-        return jsonify(message="The _id you specified is not a valid ObjectId, "
+        return jsonify(error="The _id you specified is not a valid ObjectId, "
                                "it must be a 12-byte input or 24-character hex string"), 400
 
     except Exception as e:
         print(e)
-        return jsonify(message="An error occurred while processing your request"), 500
+        return jsonify(error=str(e)), 500
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(host='0.0.0.0', port=5000)
