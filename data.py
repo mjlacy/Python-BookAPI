@@ -17,12 +17,12 @@ database = 'books'
 collection = 'books'
 
 
-def get_books():
+def get_books(params):
     def convertObjIdToStr(object):
         object['_id'] = str(object['_id'])
         return object
 
-    result = client[database][collection].find()
+    result = client[database][collection].find(params)
     if result is None:
         return []
     else:

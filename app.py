@@ -16,7 +16,21 @@ def health():
 @app.route('/', methods=['GET'])
 def get_all_books():
     try:
-        books = {"books": data.get_books()}
+        params = {}
+        bookId = request.args.get('bookId')
+        if bookId is not None:
+            params['bookId'] = int(bookId)
+        title = request.args.get('title')
+        if title is not None:
+            params['title'] = title
+        author = request.args.get('author')
+        if author is not None:
+            params['author'] = author
+        year = request.args.get('year')
+        if year is not None:
+            params['year'] = int(year)
+
+        books = {"books": data.get_books(params)}
         return Response(json.dumps(books), status=200, mimetype='application/json')
 
     except Exception as e:
@@ -34,8 +48,7 @@ def get_one_book(object_id):
 
         return Response(json.dumps(book), status=200, mimetype='application/json')
 
-    except InvalidId as ex:
-        print(ex)
+    except InvalidId:
         return jsonify(error="The _id you specified is not a valid ObjectId, "
                                "it must be a 12-byte input or 24-character hex string"), 400
 
