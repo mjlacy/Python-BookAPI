@@ -116,6 +116,16 @@ def test_get_one_book_mapping():
         assert url_for('get_one_book', object_id="5a80868574fdd6de0f4fa430") == '/5a80868574fdd6de0f4fa430'
 
 
+def test_get_one_book_idNotFound(client, monkeypatch):
+    def mock_return(obj_id):
+        return None
+
+    monkeypatch.setattr(data, 'get_book', mock_return)
+    res = client.get('/5a80868574fdd6de0f4fa433')
+
+    assert res.data == b'{"error":"No book with an _id of 5a80868574fdd6de0f4fa433 found"}\n'
+    assert res.status_code == 404
+
 def test_get_one_book_invalidId(client):
     res = client.get('/5a80868574fdd')
 
