@@ -1,8 +1,6 @@
 import data
 from flask import Flask, request, Response, json, jsonify
 from flask_cors import CORS
-from bson.errors import InvalidId
-from pymongo.errors import DuplicateKeyError
 
 app = Flask(__name__)
 CORS(app)
@@ -44,13 +42,12 @@ def get_one_book(object_id):
         book = data.get_book(object_id)
 
         if book is None:
-            return jsonify(error="No book with an _id of " + object_id + " found"), 404
+            return jsonify(error="No book with an id of " + object_id + " found"), 404
+
+        if book is 'Invalid':
+            return jsonify(error="The id you specified is not a valid id"), 400
 
         return Response(json.dumps(book), status=200, mimetype='application/json')
-
-    except InvalidId:
-        return jsonify(error="The _id you specified is not a valid ObjectId, "
-                               "it must be a 12-byte input or 24-character hex string"), 400
 
     except Exception as e:
         print(e)
@@ -58,17 +55,14 @@ def get_one_book(object_id):
 
 
 @app.route('/', methods=['POST'])
-def create_book():
+def create_one_book():
     try:
-        result = data.post_book(request.get_json())
+        result = data.create_book(request.get_json())
+
+        if result is None:
+            return jsonify(error="The id you specified is not a valid id"), 400
+
         return jsonify(link='/' + str(result.inserted_id)), 201
-
-    except InvalidId:
-        return jsonify(error="The _id you specified is not a valid ObjectId, "
-                       "it must be a 12-byte input or 24-character hex string"), 400
-
-    except DuplicateKeyError:
-        return jsonify(error="The _id you specified already exists, please choose a different one"), 409
 
     except Exception as e:
         print(e)
@@ -76,18 +70,17 @@ def create_book():
 
 
 @app.route('/<object_id>', methods=['PUT'])
-def update_book(object_id):
+def update_one_book(object_id):
     try:
-        result = data.put_book(object_id, request.get_json())
+        result = data.update_book(object_id, request.get_json())
+
+        if result is None:
+            return jsonify(error="The id you specified is not a valid id"), 400
 
         if result.upserted_id is not None:
             return jsonify(link='/' + str(result.upserted_id)), 201
 
         return jsonify(link='/' + object_id)
-
-    except InvalidId:
-        return jsonify(error="The _id you specified is not a valid ObjectId, "
-                               "it must be a 12-byte input or 24-character hex string"), 400
 
     except Exception as e:
         print(e)
@@ -98,14 +91,14 @@ def update_book(object_id):
 def delete_one_book(object_id):
     try:
         if data.get_book(object_id) is None:
-            return jsonify(error="No book with an _id of " + object_id + " found to delete"), 404
+            return jsonify(error="No book with an id of " + object_id + " found to delete"), 404
 
-        data.delete_book(object_id)
+        result = data.delete_book(object_id)
+
+        if result is None:
+            return jsonify(error="The id you specified is not a valid id"), 400
+
         return jsonify(message="Object with id: " + object_id + " deleted successfully"), 200
-
-    except InvalidId:
-        return jsonify(error="The _id you specified is not a valid ObjectId, "
-                               "it must be a 12-byte input or 24-character hex string"), 400
 
     except Exception as e:
         print(e)
