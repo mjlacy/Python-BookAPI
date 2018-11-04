@@ -44,9 +44,6 @@ def get_one_book(object_id):
         if book is None:
             return jsonify(error="No book with an id of " + object_id + " found"), 404
 
-        if book is 'Invalid':
-            return jsonify(error="The id you specified is not a valid id"), 400
-
         return Response(json.dumps(book), status=200, mimetype='application/json')
 
     except Exception as e:

@@ -31,7 +31,7 @@ def get_books(params):
 
 def get_book(obj_id):
     if not ObjectId.is_valid(obj_id):
-        return 'Invalid'
+        return None
 
     result = client[database][collection].find_one({"_id": ObjectId(obj_id)})
     if result is not None:
