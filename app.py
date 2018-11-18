@@ -57,7 +57,7 @@ def create_one_book():
         result = data.create_book(request.get_json())
 
         if result is None:
-            return jsonify(error="The id you specified is not a valid id"), 400
+            return jsonify(error="The id specified is not a valid id"), 400
 
         return jsonify(link='/' + str(result.inserted_id)), 201
 
@@ -67,12 +67,12 @@ def create_one_book():
 
 
 @app.route('/<object_id>', methods=['PUT'])
-def update_one_book(object_id):
+def update_one_book_full(object_id):
     try:
-        result = data.update_book(object_id, request.get_json())
+        result = data.update_book_full(object_id, request.get_json())
 
         if result is None:
-            return jsonify(error="The id you specified is not a valid id"), 400
+            return jsonify(error="The id specified is not a valid id"), 400
 
         if result.upserted_id is not None:
             return jsonify(link='/' + str(result.upserted_id)), 201
@@ -84,16 +84,34 @@ def update_one_book(object_id):
         return jsonify(error=str(e)), 500
 
 
+@app.route('/<object_id>', methods=['PATCH'])
+def update_one_book_partial(object_id):
+    try:
+        result = data.update_book_partial(object_id, request.get_json())
+
+        if result is None:
+            return jsonify(error="The id specified is not a valid id"), 400
+
+        if result.matched_count == 0:
+            return jsonify(error=f"No book with an id of {object_id} found to update"), 404
+
+        return jsonify(link='/' + object_id)
+
+    except Exception as e:
+        print(e)
+        return jsonify(error=str(e)), 500
+
+
 @app.route('/<object_id>', methods=['DELETE'])
 def delete_one_book(object_id):
     try:
-        if data.get_book(object_id) is None:
-            return jsonify(error="No book with an id of " + object_id + " found to delete"), 404
-
         result = data.delete_book(object_id)
 
         if result is None:
-            return jsonify(error="The id you specified is not a valid id"), 400
+            return jsonify(error="The id specified is not a valid id"), 400
+
+        if result.deleted_count == 0:
+            return jsonify(error=f"No book with an id of {object_id} found to delete"), 404
 
         return jsonify(message="Object with id: " + object_id + " deleted successfully"), 200
 

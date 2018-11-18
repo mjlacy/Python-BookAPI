@@ -50,12 +50,20 @@ def create_book(body):
     return client[database][collection].insert_one(body)
 
 
-def update_book(obj_id, body):
+def update_book_full(obj_id, body):
     if not ObjectId.is_valid(obj_id):
         return None
 
     body.pop('_id', None)
-    return client[database][collection].update_one({"_id": ObjectId(obj_id)}, {'$set': body}, upsert=True)
+    return client[database][collection].replace_one({"_id": ObjectId(obj_id)}, body, upsert=True)
+
+
+def update_book_partial(obj_id, body):
+    if not ObjectId.is_valid(obj_id):
+        return None
+
+    body.pop('_id', None)
+    return client[database][collection].update_one({"_id": ObjectId(obj_id)}, {'$set': body})
 
 
 def delete_book(obj_id):

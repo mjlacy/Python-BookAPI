@@ -43,6 +43,7 @@ mock_collection = [
     },
 ]
 
+
 @pytest.fixture
 def client():
     return app.test_client()
@@ -118,7 +119,7 @@ def test_get_one_book_mapping():
         assert url_for('get_one_book', object_id="5a80868574fdd6de0f4fa430") == '/5a80868574fdd6de0f4fa430'
 
 
-def test_get_one_book_idNotFound(client, monkeypatch):
+def test_get_one_book_id_not_found(client, monkeypatch):
     def mock_return(obj_id):
         return None
 
@@ -129,7 +130,7 @@ def test_get_one_book_idNotFound(client, monkeypatch):
     assert res.status_code == 404
 
 
-def test_get_one_book_invalidId(client):
+def test_get_one_book_invalid_id(client):
     res = client.get('/5a80868574fdd')
 
     assert res.data == b'{"error":"No book with an id of 5a80868574fdd found"}\n'
@@ -163,12 +164,12 @@ def test_create_book_mapping():
         assert url_for('create_one_book') == '/'
 
 
-def test_create_book_invalidId(client):
+def test_create_book_invalid_id(client):
     req_body = copy.copy(mock_collection[0])
     req_body['_id'] = "5a80868574fdd"
     res = client.post('/', data=json.dumps(req_body), headers=headers)
 
-    assert res.data == b'{"error":"The id you specified is not a valid id"}\n'
+    assert res.data == b'{"error":"The id specified is not a valid id"}\n'
     assert res.status_code == 400
 
 
@@ -183,7 +184,7 @@ def test_create_book_exception(client, monkeypatch):
     assert res.status_code == 500
 
 
-def test_create_book_noId_success(client, monkeypatch):
+def test_create_book_no_id_success(client, monkeypatch):
     req_body = copy.copy(mock_collection[0])
     req_body.pop('_id')
 
@@ -208,30 +209,30 @@ def test_create_book_id_success(client, monkeypatch):
     assert res.status_code == 201
 
 
-def test_update_book_mapping():
+def test_update_book_full_mapping():
     with app.test_request_context():
-        assert url_for('update_one_book', object_id="5a80868574fdd6de0f4fa430") == '/5a80868574fdd6de0f4fa430'
+        assert url_for('update_one_book_full', object_id="5a80868574fdd6de0f4fa430") == '/5a80868574fdd6de0f4fa430'
 
 
-def test_update_book_invalidId(client):
+def test_update_book_full_invalid_id(client):
     res = client.put('/5a80868574fdd', data=json.dumps(mock_collection[0]), headers=headers)
 
-    assert res.data == b'{"error":"The id you specified is not a valid id"}\n'
+    assert res.data == b'{"error":"The id specified is not a valid id"}\n'
     assert res.status_code == 400
 
 
-def test_update_book_exception(client, monkeypatch):
+def test_update_book_full_exception(client, monkeypatch):
     def mock_return(obj_id, body):
         raise Exception('Test Exception')
 
-    monkeypatch.setattr(data, 'update_book', mock_return)
+    monkeypatch.setattr(data, 'update_book_full', mock_return)
     res = client.put('/5a80868574fdd6de0f4fa430', data=json.dumps(mock_collection[0]), headers=headers)
 
     assert res.data == b'{"error":"Test Exception"}\n'
     assert res.status_code == 500
 
 
-def test_update_book_noId_insert_success(client, monkeypatch):
+def test_update_book_full_no_id_insert_success(client, monkeypatch):
     req_body = copy.copy(mock_collection[0])
     req_body.pop('_id')
 
@@ -239,45 +240,90 @@ def test_update_book_noId_insert_success(client, monkeypatch):
         return UpdateResult({'n': 1, 'nModified': 0, 'upserted': ObjectId('5a80868574fdd6de0f4fa432'),
                              'ok': 1.0, 'updatedExisting': False}, True)
 
-    monkeypatch.setattr(data, 'update_book', mock_return)
+    monkeypatch.setattr(data, 'update_book_full', mock_return)
     res = client.put('/5a80868574fdd6de0f4fa432', data=json.dumps(req_body), headers=headers)
 
     assert res.data == b'{"link":"/5a80868574fdd6de0f4fa432"}\n'
     assert res.status_code == 201
 
 
-def test_update_book_noId_update_success(client, monkeypatch):
+def test_update_book_full_no_id_update_success(client, monkeypatch):
     req_body = copy.copy(mock_collection[0])
     req_body.pop('_id')
 
     def mock_return(obj_id, body):
         return UpdateResult({'n': 1, 'nModified': 1, 'ok': 1.0, 'updatedExisting': True}, True)
 
-    monkeypatch.setattr(data, 'update_book', mock_return)
+    monkeypatch.setattr(data, 'update_book_full', mock_return)
     res = client.put('/5a80868574fdd6de0f4fa432', data=json.dumps(req_body), headers=headers)
 
     assert res.data == b'{"link":"/5a80868574fdd6de0f4fa432"}\n'
     assert res.status_code == 200
 
 
-def test_update_book_id_insert_success(client, monkeypatch):
+def test_update_book_full_id_insert_success(client, monkeypatch):
     def mock_return(obj_id, body):
         return UpdateResult({'n': 1, 'nModified': 0, 'upserted': ObjectId('5a80868574fdd6de0f4fa432'),
                              'ok': 1.0, 'updatedExisting': False}, True)
 
-    monkeypatch.setattr(data, 'update_book', mock_return)
+    monkeypatch.setattr(data, 'update_book_full', mock_return)
     res = client.put('/5a80868574fdd6de0f4fa432', data=json.dumps(mock_collection[0]), headers=headers)
 
     assert res.data == b'{"link":"/5a80868574fdd6de0f4fa432"}\n'
     assert res.status_code == 201
 
 
-def test_update_book_id_update_success(client, monkeypatch):
+def test_update_book_full_id_update_success(client, monkeypatch):
     def mock_return(obj_id, body):
         return UpdateResult({'n': 1, 'nModified': 1, 'ok': 1.0, 'updatedExisting': True}, True)
 
-    monkeypatch.setattr(data, 'update_book', mock_return)
+    monkeypatch.setattr(data, 'update_book_full', mock_return)
     res = client.put('/5a80868574fdd6de0f4fa432', data=json.dumps(mock_collection[0]), headers=headers)
+
+    assert res.data == b'{"link":"/5a80868574fdd6de0f4fa432"}\n'
+    assert res.status_code == 200
+
+
+def test_update_book_partial_mapping():
+    with app.test_request_context():
+        assert url_for('update_one_book_partial', object_id="5a80868574fdd6de0f4fa430") == '/5a80868574fdd6de0f4fa430'
+
+
+def test_update_book_partial_invalid_id(client):
+    res = client.patch('/5a80868574fdd', data=json.dumps(mock_collection[0]), headers=headers)
+
+    assert res.data == b'{"error":"The id specified is not a valid id"}\n'
+    assert res.status_code == 400
+
+
+def test_update_book_partial_exception(client, monkeypatch):
+    def mock_return(obj_id, body):
+        raise Exception('Test Exception')
+
+    monkeypatch.setattr(data, 'update_book_partial', mock_return)
+    res = client.patch('/5a80868574fdd6de0f4fa430', data=json.dumps(mock_collection[0]), headers=headers)
+
+    assert res.data == b'{"error":"Test Exception"}\n'
+    assert res.status_code == 500
+
+
+def test_update_book_partial_id_not_found(client, monkeypatch):
+    def mock_return(obj_id, body):
+        return UpdateResult({'n': 0, 'nModified': 0, 'ok': 1.0, 'updatedExisting': False}, True)
+
+    monkeypatch.setattr(data, 'update_book_partial', mock_return)
+    res = client.patch('/5a80868574fdd6de0f4fa433')
+
+    assert res.data == b'{"error":"No book with an id of 5a80868574fdd6de0f4fa433 found to update"}\n'
+    assert res.status_code == 404
+
+
+def test_update_book_partial_success(client, monkeypatch):
+    def mock_return(obj_id, body):
+        return UpdateResult({'n': 1, 'nModified': 1, 'ok': 1.0, 'updatedExisting': True}, True)
+
+    monkeypatch.setattr(data, 'update_book_partial', mock_return)
+    res = client.patch('/5a80868574fdd6de0f4fa432', data=json.dumps(mock_collection[0]), headers=headers)
 
     assert res.data == b'{"link":"/5a80868574fdd6de0f4fa432"}\n'
     assert res.status_code == 200
@@ -288,29 +334,29 @@ def test_delete_book_mapping():
         assert url_for('delete_one_book', object_id="5a80868574fdd6de0f4fa430") == '/5a80868574fdd6de0f4fa430'
 
 
-def test_delete_book_idNotFound(client, monkeypatch):
+def test_delete_book_id_not_found(client, monkeypatch):
     def mock_return(obj_id):
-        return None
+        return DeleteResult({'n': 0, 'ok': 1.0}, True)
 
-    monkeypatch.setattr(data, 'get_book', mock_return)
+    monkeypatch.setattr(data, 'delete_book', mock_return)
     res = client.delete('/5a80868574fdd6de0f4fa433')
 
     assert res.data == b'{"error":"No book with an id of 5a80868574fdd6de0f4fa433 found to delete"}\n'
     assert res.status_code == 404
 
 
-def test_delete_book_invalidId(client):
+def test_delete_book_invalid_id(client):
     res = client.delete('/5a80868574fdd')
 
-    assert res.data == b'{"error":"No book with an id of 5a80868574fdd found to delete"}\n'
-    assert res.status_code == 404
+    assert res.data == b'{"error":"The id specified is not a valid id"}\n'
+    assert res.status_code == 400
 
 
 def test_delete_book_exception(client, monkeypatch):
     def mock_return(obj_id):
         raise Exception('Test Exception')
 
-    monkeypatch.setattr(data, 'get_book', mock_return)
+    monkeypatch.setattr(data, 'delete_book', mock_return)
     res = client.delete('/5a80868574fdd6de0f4fa430')
 
     assert res.data == b'{"error":"Test Exception"}\n'
@@ -318,13 +364,9 @@ def test_delete_book_exception(client, monkeypatch):
 
 
 def test_delete_book_success(client, monkeypatch):
-    def mock_get_return(obj_id):
-        return mock_collection[0]
-
     def mock_return(obj_id):
         return DeleteResult({'n': 1, 'ok': 1.0}, True)
 
-    monkeypatch.setattr(data, 'get_book', mock_get_return)
     monkeypatch.setattr(data, 'delete_book', mock_return)
     res = client.delete('/5a80868574fdd6de0f4fa430')
 
