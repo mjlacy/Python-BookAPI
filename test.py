@@ -157,6 +157,7 @@ def test_get_book_success(client, monkeypatch):
 
     assert res.data.decode('utf-8') == json.dumps(mock_collection[0])
     assert res.status_code == 200
+    assert 'Location: /5a80868574fdd6de0f4fa430' in str(res.headers)
 
 
 def test_create_book_mapping():
@@ -194,8 +195,9 @@ def test_create_book_no_id_success(client, monkeypatch):
     monkeypatch.setattr(data, 'create_book', mock_return)
     res = client.post('/', data=json.dumps(req_body), headers=headers)
 
-    assert res.data == b'{"link":"/5a80868574fdd6de0f4fa431"}\n'
+    assert res.data.decode('utf-8') == json.dumps(req_body)
     assert res.status_code == 201
+    assert 'Location: /5a80868574fdd6de0f4fa431' in str(res.headers)
 
 
 def test_create_book_id_success(client, monkeypatch):
@@ -205,8 +207,9 @@ def test_create_book_id_success(client, monkeypatch):
     monkeypatch.setattr(data, 'create_book', mock_return)
     res = client.post('/', data=json.dumps(mock_collection[0]), headers=headers)
 
-    assert res.data == b'{"link":"/5a80868574fdd6de0f4fa432"}\n'
+    assert res.data.decode('utf-8') == json.dumps(mock_collection[0])
     assert res.status_code == 201
+    assert 'Location: /5a80868574fdd6de0f4fa432' in str(res.headers)
 
 
 def test_update_book_full_mapping():
@@ -237,14 +240,15 @@ def test_update_book_full_no_id_insert_success(client, monkeypatch):
     req_body.pop('_id')
 
     def mock_return(obj_id, body):
-        return UpdateResult({'n': 1, 'nModified': 0, 'upserted': ObjectId('5a80868574fdd6de0f4fa432'),
+        return UpdateResult({'n': 1, 'nModified': 0, 'upserted': ObjectId('5a80868574fdd6de0f4fa430'),
                              'ok': 1.0, 'updatedExisting': False}, True)
 
     monkeypatch.setattr(data, 'update_book_full', mock_return)
-    res = client.put('/5a80868574fdd6de0f4fa432', data=json.dumps(req_body), headers=headers)
+    res = client.put('/5a80868574fdd6de0f4fa430', data=json.dumps(req_body), headers=headers)
 
-    assert res.data == b'{"link":"/5a80868574fdd6de0f4fa432"}\n'
+    assert res.data.decode('utf-8') == json.dumps(mock_collection[0])
     assert res.status_code == 201
+    assert 'Location: /5a80868574fdd6de0f4fa430' in str(res.headers)
 
 
 def test_update_book_full_no_id_update_success(client, monkeypatch):
@@ -255,22 +259,24 @@ def test_update_book_full_no_id_update_success(client, monkeypatch):
         return UpdateResult({'n': 1, 'nModified': 1, 'ok': 1.0, 'updatedExisting': True}, True)
 
     monkeypatch.setattr(data, 'update_book_full', mock_return)
-    res = client.put('/5a80868574fdd6de0f4fa432', data=json.dumps(req_body), headers=headers)
+    res = client.put('/5a80868574fdd6de0f4fa430', data=json.dumps(req_body), headers=headers)
 
-    assert res.data == b'{"link":"/5a80868574fdd6de0f4fa432"}\n'
+    assert res.data.decode('utf-8') == json.dumps(mock_collection[0])
     assert res.status_code == 200
+    assert 'Location: /5a80868574fdd6de0f4fa430' in str(res.headers)
 
 
 def test_update_book_full_id_insert_success(client, monkeypatch):
     def mock_return(obj_id, body):
-        return UpdateResult({'n': 1, 'nModified': 0, 'upserted': ObjectId('5a80868574fdd6de0f4fa432'),
+        return UpdateResult({'n': 1, 'nModified': 0, 'upserted': ObjectId('5a80868574fdd6de0f4fa430'),
                              'ok': 1.0, 'updatedExisting': False}, True)
 
     monkeypatch.setattr(data, 'update_book_full', mock_return)
-    res = client.put('/5a80868574fdd6de0f4fa432', data=json.dumps(mock_collection[0]), headers=headers)
+    res = client.put('/5a80868574fdd6de0f4fa430', data=json.dumps(mock_collection[0]), headers=headers)
 
-    assert res.data == b'{"link":"/5a80868574fdd6de0f4fa432"}\n'
+    assert res.data.decode('utf-8') == json.dumps(mock_collection[0])
     assert res.status_code == 201
+    assert 'Location: /5a80868574fdd6de0f4fa430' in str(res.headers)
 
 
 def test_update_book_full_id_update_success(client, monkeypatch):
@@ -278,10 +284,11 @@ def test_update_book_full_id_update_success(client, monkeypatch):
         return UpdateResult({'n': 1, 'nModified': 1, 'ok': 1.0, 'updatedExisting': True}, True)
 
     monkeypatch.setattr(data, 'update_book_full', mock_return)
-    res = client.put('/5a80868574fdd6de0f4fa432', data=json.dumps(mock_collection[0]), headers=headers)
+    res = client.put('/5a80868574fdd6de0f4fa430', data=json.dumps(mock_collection[0]), headers=headers)
 
-    assert res.data == b'{"link":"/5a80868574fdd6de0f4fa432"}\n'
+    assert res.data.decode('utf-8') == json.dumps(mock_collection[0])
     assert res.status_code == 200
+    assert 'Location: /5a80868574fdd6de0f4fa430' in str(res.headers)
 
 
 def test_update_book_partial_mapping():
@@ -325,8 +332,8 @@ def test_update_book_partial_success(client, monkeypatch):
     monkeypatch.setattr(data, 'update_book_partial', mock_return)
     res = client.patch('/5a80868574fdd6de0f4fa432', data=json.dumps(mock_collection[0]), headers=headers)
 
-    assert res.data == b'{"link":"/5a80868574fdd6de0f4fa432"}\n'
     assert res.status_code == 200
+    assert 'Location: /5a80868574fdd6de0f4fa432' in str(res.headers)
 
 
 def test_delete_book_mapping():

@@ -44,7 +44,10 @@ def get_one_book(object_id):
         if book is None:
             return jsonify(error="No book with an id of " + object_id + " found"), 404
 
-        return Response(json.dumps(book), status=200, mimetype='application/json')
+        resp = Response(json.dumps(book), status=200, mimetype='application/json')
+        resp.headers['Location'] = f'/{object_id}'
+        resp.autocorrect_location_header = False
+        return resp
 
     except Exception as e:
         print(e)
@@ -54,12 +57,19 @@ def get_one_book(object_id):
 @app.route('/', methods=['POST'])
 def create_one_book():
     try:
-        result = data.create_book(request.get_json())
+        book = request.get_json()
+        result = data.create_book(book)
 
         if result is None:
             return jsonify(error="The id specified is not a valid id"), 400
 
-        return jsonify(link='/' + str(result.inserted_id)), 201
+        if "_id" in book:
+            book['_id'] = str(book['_id'])
+
+        resp = Response(json.dumps(book), status=201, mimetype='application/json')
+        resp.headers['Location'] = f'/{result.inserted_id}'
+        resp.autocorrect_location_header = False
+        return resp
 
     except Exception as e:
         print(e)
@@ -69,15 +79,25 @@ def create_one_book():
 @app.route('/<object_id>', methods=['PUT'])
 def update_one_book_full(object_id):
     try:
-        result = data.update_book_full(object_id, request.get_json())
+        book = request.get_json()
+
+        result = data.update_book_full(object_id, book)
 
         if result is None:
             return jsonify(error="The id specified is not a valid id"), 400
 
         if result.upserted_id is not None:
-            return jsonify(link='/' + str(result.upserted_id)), 201
+            book['_id'] = str(result.upserted_id)
+            resp = Response(json.dumps(book), status=201, mimetype='application/json')
+            resp.headers['Location'] = f'/{object_id}'
+            resp.autocorrect_location_header = False
+            return resp
 
-        return jsonify(link='/' + object_id)
+        book['_id'] = object_id
+        resp = Response(json.dumps(book), status=200, mimetype='application/json')
+        resp.headers['Location'] = f'/{object_id}'
+        resp.autocorrect_location_header = False
+        return resp
 
     except Exception as e:
         print(e)
@@ -95,7 +115,10 @@ def update_one_book_partial(object_id):
         if result.matched_count == 0:
             return jsonify(error=f"No book with an id of {object_id} found to update"), 404
 
-        return jsonify(link='/' + object_id)
+        resp = Response(status=200, mimetype='application/json')
+        resp.headers['Location'] = f'/{object_id}'
+        resp.autocorrect_location_header = False
+        return resp
 
     except Exception as e:
         print(e)
